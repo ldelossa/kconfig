@@ -1,0 +1,76 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Rsync Local To Remote",
+            "type": "shell",
+            "command": "rsync -e ssh --delete -azv $(pwd)/ ${input:sshHost}:$(pwd)",
+            "problemMatcher": []
+        },
+        {
+            "label": "Rsync Remote To Local",
+            "type": "shell",
+            "command": "rsync -e ssh --delete -azv ${input:sshHost}:$(pwd)/ $(pwd)/",
+            "problemMatcher": []
+        },
+        {
+            "label": "Kernel Make Debug Config Remote",
+            "type": "shell",
+            "command": "ssh ${input:sshHost} \"cd $(pwd) && lsmod > mods.now && yes \"\" | make LSMOD=mods.now localmodconfig && sed -i 's/^\\(CONFIG_RANDOMIZE_BASE\\)=y/# \\1 is not set/' .config\"",
+            "problemMatcher": []
+        },
+        {
+            "label": "Kernel Build Remote",
+            "type": "shell",
+            "command": "ssh ${input:sshHost} \"cd $(pwd) && make -j 16 && make modules && ./scripts/clang-tools/gen_compile_commands.py && cd tools/lib/bpf && make\""
+        },
+        {
+            "label": "Kernel Install Remote",
+            "type": "shell",
+            "command": "ssh ${input:sshHostRoot} \"cd $(pwd) && make modules_install && make install && cd tools/lib/bpf && make install\"",
+            "problemMatcher": []
+        },
+        // this is a hack, it tricks the iproute2 package which is provided by the base distrubtion into using the locally
+        // built libbpf shared library, however its faster then addingsteps to build iproute2 locally.
+        {
+            "label": "Kernel Install libbpf Remote",
+            "type": "shell",
+            "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/lib/bpf && mv /usr/lib64/libbpf* /tmp || true && make prefix=/usr install && ln -s /usr/lib64/\\$(readlink /usr/lib64/libbpf.so) /usr/lib64/libbpf.so.0\"",
+            "problemMatcher": []
+        },
+        {
+            "label": "Restart Remote",
+            "type": "shell",
+            "command": "ssh ${input:sshHostRoot} \"reboot\"",
+            "problemMatcher": []
+        },
+        {
+            "label": "Kernel Build and Push",
+            "type": "shell",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Rsync Local To Remote",
+                "Kernel Build Remote",
+                "Rsync Remote To Local",
+                "Kernel Install Remote",
+                "Kernel Install libbpf Remote",
+                "Restart Remote"
+            ],
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "sshHost",
+            "type": "promptString",
+            "description": "An ssh host string in user@host format"
+        },
+        {
+            "id": "sshHostRoot",
+            "type": "promptString",
+            "description": "An ssh host string in root@host format"
+        }
+    ]
+}
