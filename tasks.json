@@ -33,7 +33,7 @@
             "problemMatcher": []
         },
         // this is a hack, it tricks the iproute2 package which is provided by the base distrubtion into using the locally
-        // built libbpf shared library, however its faster then addingsteps to build iproute2 locally.
+        // built libbpf shared library, however its faster then adding steps to build iproute2 locally.
         {
             "label": "Kernel Install libbpf Remote",
             "type": "shell",
