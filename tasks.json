@@ -33,11 +33,17 @@
             "problemMatcher": []
         },
         // this is a hack, it tricks the iproute2 package which is provided by the base distrubtion into using the locally
-        // built libbpf shared library, however its faster then adding steps to build iproute2 locally.
+        // built libbpf shared library, however its faster then addingsteps to build iproute2 locally.
         {
             "label": "Kernel Install libbpf Remote",
             "type": "shell",
             "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/lib/bpf && mv /usr/lib64/libbpf* /tmp || true && make prefix=/usr install && ln -s /usr/lib64/\\$(readlink /usr/lib64/libbpf.so) /usr/lib64/libbpf.so.0\"",
+            "problemMatcher": []
+        },
+        {
+            "label": "Kernel Install bpftool Remote",
+            "type": "shell",
+            "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/bpf/bpftool && make && make install\"",
             "problemMatcher": []
         },
         {
@@ -56,6 +62,7 @@
                 "Rsync Remote To Local",
                 "Kernel Install Remote",
                 "Kernel Install libbpf Remote",
+                "Kernel Install bpftool Remote",
                 "Restart Remote"
             ],
             "problemMatcher": []
