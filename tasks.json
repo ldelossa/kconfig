@@ -24,12 +24,12 @@
         {
             "label": "Kernel Build Remote",
             "type": "shell",
-            "command": "ssh ${input:sshHost} \"cd $(pwd) && make -j 16 && make modules && ./scripts/clang-tools/gen_compile_commands.py && cd tools/lib/bpf && make\""
+            "command": "ssh ${input:sshHost} \"cd $(pwd) && make -j 16 && make modules && make tools/lib/bpf && make tools/bpf/bpftool && ./scripts/clang-tools/gen_compile_commands.py\""
         },
         {
             "label": "Kernel Install Remote",
             "type": "shell",
-            "command": "ssh ${input:sshHostRoot} \"cd $(pwd) && make modules_install && make install && cd tools/lib/bpf && make install\"",
+            "command": "ssh ${input:sshHostRoot} \"cd $(pwd) && make modules_install && make install\"",
             "problemMatcher": []
         },
         // this is a hack, it tricks the iproute2 package which is provided by the base distrubtion into using the locally
@@ -43,7 +43,7 @@
         {
             "label": "Kernel Install bpftool Remote",
             "type": "shell",
-            "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/bpf/bpftool && make && make install\"",
+            "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/bpf/bpftool && make install\"",
             "problemMatcher": []
         },
         {
