@@ -6,7 +6,7 @@
         {
             "label": "Rsync Local To Remote",
             "type": "shell",
-            "command": "rsync -e ssh --delete -azv $(pwd)/ ${input:sshHost}:$(pwd)",
+            "command": "rsync --mkpath -e ssh --delete -azv $(pwd)/ ${input:sshHost}:$(pwd)",
             "problemMatcher": []
         },
         {
@@ -24,26 +24,37 @@
         {
             "label": "Kernel Build Remote",
             "type": "shell",
-            "command": "ssh ${input:sshHost} \"cd $(pwd) && make -j 16 && make modules && make tools/lib/bpf && make tools/bpf/bpftool && ./scripts/clang-tools/gen_compile_commands.py\""
+            "command": "ssh ${input:sshHost} \"cd $(pwd) && make -j 16 && make modules && make -C tools/lib/bpf && make -C tools/bpf/bpftool && ./scripts/clang-tools/gen_compile_commands.py\"",
+            "problemMatcher": []
         },
         {
             "label": "Kernel Install Remote",
             "type": "shell",
-            "command": "ssh ${input:sshHostRoot} \"cd $(pwd) && make modules_install && make install\"",
+            "command": "ssh ${input:sshHostRoot} \"cd $(pwd) && make modules_install && make install && rm -rf /usr/include/linux && make INSTALL_HDR_PATH=/usr headers_install\"",
             "problemMatcher": []
         },
-        // this is a hack, it tricks the iproute2 package which is provided by the base distrubtion into using the locally
-        // built libbpf shared library, however its faster then addingsteps to build iproute2 locally.
+        // # installing libbpf is a bit involved...
+        // # for some reason, running 'sudo make install' will re-compile the library, setting the owner to root, which then
+        // # breaks the rsync between the host and the client.
+        // # we assume libbpf is already made in the 'Kernel Build Remote' task.
+        // # let's symlink the shared libraries in place so we retain ownership
+        // # and then call 'make install_headers' and `make install_pkconfig` directly as root so it can be installed correctly.
         {
             "label": "Kernel Install libbpf Remote",
             "type": "shell",
-            "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/lib/bpf && mv /usr/lib64/libbpf* /tmp || true && make prefix=/usr install && ln -s /usr/lib64/\\$(readlink /usr/lib64/libbpf.so) /usr/lib64/libbpf.so.0\"",
+            "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/lib/bpf && mv /usr/lib64/libbpf* /tmp || true && rm -rf /usr/include/bpf && make prefix=/usr install_headers && make install_pkgconfig && ln -s $(pwd)/tools/lib/bpf/libbpf.so.1.2.0 /usr/lib64/libbpf.so.1.2.0 && ln -s $(pwd)/tools/lib/bpf/libbpf.so.1.2.0 /usr/lib64/libbpf.so.1 && ln -s $(pwd)/tools/lib/bpf/libbpf.so.1.2.0 /usr/lib64/libbpf.so.0 && ln -s $(pwd)/tools/lib/bpf/libbpf.so.1.2.0 /usr/lib64/libbpf.so\"",
             "problemMatcher": []
         },
         {
             "label": "Kernel Install bpftool Remote",
             "type": "shell",
-            "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/bpf/bpftool && make install\"",
+            "command": "ssh ${input:sshHostRoot} \"cd $(pwd)/tools/bpf/bpftool && cp bpftool /usr/local/sbin/bpftool\"",
+            "problemMatcher": []
+        },
+        {
+            "label": "Kernel Build BPF SelfTests Remote",
+            "type": "shell",
+            "command": "ssh ${input:sshHost} \"cd $(pwd)/tools/testing/selftests/bpf && bear -- make\"",
             "problemMatcher": []
         },
         {
@@ -64,6 +75,17 @@
                 "Kernel Install libbpf Remote",
                 "Kernel Install bpftool Remote",
                 "Restart Remote"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Kernel Build BPF SelfTests",
+            "type": "shell",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Rsync Local To Remote",
+                "Kernel Build BPF SelfTests Remote",
+                "Rsync Remote To Local"
             ],
             "problemMatcher": []
         }
