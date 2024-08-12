@@ -1,0 +1,33 @@
+<!-- must use 1.0 schema to reference command line passthrough schemas -->
+<!-- increments ports as needed for VMs -->
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+
+  <devices>
+    <!-- remote telnet at guest:ttyS1 -->
+    <serial type='tcp'>
+      <source mode='bind' host='0.0.0.0' service='9990'/>
+      <protocol type='telnet'/>
+      <target type='isa-serial' port='1'>
+        <model name='isa-serial'/>
+      </target>
+    </serial>
+
+    <!-- remote raw serial for KGDB at guest:ttyS2 -->
+    <serial type='tcp'>
+      <source mode='bind' host='0.0.0.0' service='7770'/>
+      <protocol type='raw'/>
+      <target type='isa-serial' port='2'>
+        <model name='isa-serial'/>
+      </target>
+    </serial>
+
+  </devices>
+
+  <!-- qemu's GDB stub, external to guest -->
+  <qemu:commandline>
+    <qemu:arg value='-gdb'/>
+    <!-- <qemu:arg value='-S'/> uncomment to wait for debugger on start -->
+    <qemu:arg value='tcp:0.0.0.0:6660'/>
+  </qemu:commandline>
+
+</domain>
